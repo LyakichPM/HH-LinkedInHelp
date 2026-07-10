@@ -4,9 +4,39 @@ hh_cookies.json
 
 # Telegram inbox queue
 tg-bridge/tg_inbox.jsonl
+tg_inbox.jsonl
+tg_offset_poll.txt
 
 # Binaries / large files
 *.exe
+
+# Debug / temporary files
+*_results.json
+*_results.txt
+*_stderr.txt
+*_stdout.txt
+*_check_results.json
+*_check_results.txt
+*_fix_results.json
+*_fix_results.txt
+*_apply_results.json
+*_apply_results.txt
+*_debug.png
+*_before.png
+*_after.png
+*_filled.png
+*_result.png
+chat_*.png
+after_*.png
+apply_*.png
+li_*.png
+
+# Temporary cover letters (keep only final ones if needed)
+cover_*.txt
+
+# Temporary scripts output
+*.jsonl
+*.log
 
 # Python
 __pycache__/
