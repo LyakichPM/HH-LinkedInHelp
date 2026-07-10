@@ -1,0 +1,48 @@
+{
+  "description": "CSS selectors for hh.ru pages — used by Playwright for search, apply, and verification",
+
+  "search": {
+    "vacancy_card": "[data-qa=\"vacancy-serp__vacancy\"]",
+    "title": "[data-qa=\"serp-item__title\"]",
+    "employer": "[data-qa=\"vacancy-serp__vacancy-employer\"]",
+    "salary": "[data-qa=\"vacancy-serp__vacancy-compensation\"]",
+    "applied_marker": "[data-qa=\"vacancy-serp__vacancy_response\"]",
+    "next_page": "[data-qa=\"pager-next\"]"
+  },
+
+  "vacancy_page": {
+    "apply_button": "[data-qa=\"vacancy-response-link-top\"]",
+    "company_name": "[data-qa=\"vacancy-company-name\"]",
+    "title": "h1",
+    "applied_text_marker": "Вы откликнулись",
+    "quick_apply_button": "[data-qa=\"vacancy-response-link-top\"]"
+  },
+
+  "apply_popup": {
+    "letter_textarea": "[data-qa=\"vacancy-response-popup-form-letter\"]",
+    "submit_button": "[data-qa=\"vacancy-response-popup-form-submit\"]",
+    "any_textarea": "textarea",
+    "any_submit": "button[type=\"submit\"]"
+  },
+
+  "chat": {
+    "iframe_chat": "iframe[data-qa=\"chat\"]",
+    "iframe_vacancy_chat": "iframe[data-qa=\"vacancy-chat\"]",
+    "add_letter_button": "text=Добавить сопроводительное",
+    "send_button": "button:has-text(\"Отправить\")"
+  },
+
+  "negotiations": {
+    "list_item": "[data-qa=\"negotiations-list-item\"]",
+    "vacancy_title": "[data-qa=\"vacancy-title\"]",
+    "employer_name": "[data-qa=\"employer-name\"]",
+    "status": "[data-qa=\"negotiations-list-item-status\"]"
+  },
+
+  "notes": {
+    "apply_popup": "Popup появляется после клика по кнопке отклика. Сначала заполняем textarea, потом сабмитим.",
+    "quick_apply": "Некоторые работодатели используют быстрый отклик без попапа — кнопка та же, но модалки нет.",
+    "already_applied": "Если 'Вы откликнулись' есть в body — пропускаем. Добавить письмо можно через чат.",
+    "captcha": "Если в body есть 'captcha' — останавливаемся, ждём решения пользователя."
+  }
+}

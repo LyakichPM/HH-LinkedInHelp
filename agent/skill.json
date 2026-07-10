@@ -1,0 +1,20 @@
+{
+  "name": "hh-agent",
+  "version": "1.0.0",
+  "description": "Toolkit for searching, applying, and tracking vacancies on hh.ru with Telegram integration",
+  "skills": {
+    "search": "Search hh.ru for vacancies matching a query. Supports salary filter, date range, multi-page.",
+    "apply": "Apply to a vacancy with a cover letter. Popup-first flow: fills letter before submitting. Fallback to quick apply.",
+    "verify": "Check if already applied to a vacancy. View active negotiations.",
+    "auth": "Manage hh.ru authentication (login with browser, check cookie status).",
+    "telegram": "Send messages via Telegram bot. Read incoming messages from inbox file.",
+    "cv-design": "Generate CV PDF via browser, deliver via Telegram."
+  },
+  "dependencies": ["playwright", "click", "requests"],
+  "setup": "pip install -e . && playwright install chromium && hh auth login",
+  "permissions": {
+    "bash": ["python", "playwright", "pip"],
+    "read": ["config.local.json", "hh_cookies.json", "tg_inbox.jsonl"],
+    "write": ["*.py", "*.json", "*.md", "*.html"]
+  }
+}
