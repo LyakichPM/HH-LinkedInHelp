@@ -5,6 +5,9 @@ hh_cookies.json
 # Telegram inbox queue
 tg-bridge/tg_inbox.jsonl
 
+# Binaries / large files
+*.exe
+
 # Python
 __pycache__/
 *.pyc
