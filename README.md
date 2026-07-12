@@ -79,6 +79,79 @@ cp config/config.example.json config/config.local.json
 
 ---
 
+## Установка по платформам
+
+### 🍎 macOS
+
+```bash
+# 1. Системные зависимости (Homebrew — https://brew.sh)
+brew install python@3.10 git
+# опционально, для TG WebApp через HTTPS-туннель:
+brew install cloudflared
+
+# 2. Клонирование и окружение
+git clone https://github.com/LyakichPM/HH-LinkedInHelp.git
+cd HH-LinkedInHelp
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Зависимости + браузер
+pip install -e .
+playwright install chromium          # на macOS системные библиотеки не нужны
+
+# 4. Конфиг
+cp config/config.example.json config/config.local.json
+# отредактируйте config.local.json — токены/куки/прокси
+
+# (либо всё разом)
+chmod +x setup.sh && ./setup.sh
+```
+
+> **Apple Silicon (M1/M2/M3):** всё работает нативно на arm64, Rosetta не требуется. Если `playwright install` ругается — обновите: `pip install -U playwright`.
+
+### 🐧 Linux (Debian / Ubuntu)
+
+```bash
+# 1. Системные зависимости
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip git
+
+# 2. Клонирование и окружение
+git clone https://github.com/LyakichPM/HH-LinkedInHelp.git
+cd HH-LinkedInHelp
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Зависимости + браузер
+pip install -e .
+playwright install-deps chromium     # системные libs для Chromium (нужен sudo)
+playwright install chromium
+
+# 4. Конфиг
+cp config/config.example.json config/config.local.json
+# отредактируйте config.local.json — токены/куки/прокси
+
+# (либо всё разом)
+chmod +x setup.sh && ./setup.sh
+```
+
+> **Fedora/RHEL:** замените шаг 1 на `sudo dnf install python3 python3-pip git`.
+> **Arch:** `sudo pacman -S python git`.
+> **Headless-сервер (без GUI):** `hh auth login` открывает окно браузера — для сохранения куки логиньтесь на машине с дисплеем (или через X-forwarding / `xvfb-run`), затем перенесите `hh_cookies.json`.
+> **cloudflared** (только если нужен TG WebApp): скачайте бинарь из [релизов Cloudflare](https://github.com/cloudflare/cloudflared/releases) или установите пакетом дистрибутива. В репозитории его нет (`.gitignore`).
+
+### 🪟 Windows
+
+```powershell
+git clone https://github.com/LyakichPM/HH-LinkedInHelp.git
+cd HH-LinkedInHelp
+.\setup.ps1        # создаёт конфиг, ставит зависимости и Playwright Chromium
+```
+
+Затем отредактируйте `config\config.local.json` и запустите `hh auth login`.
+
+---
+
 ## Конфигурация (`config/config.local.json`)
 
 ```json
