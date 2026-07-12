@@ -131,6 +131,30 @@ def count():
     print(f"Unread messages: {count}")
 
 
+@tg.command()
+def listen():
+    """Start long-poll listener for incoming Telegram messages (writes to tg_inbox.jsonl)."""
+    import subprocess
+    import sys
+    import os
+
+    script_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "tg-bridge", "tg_bot.py"
+    )
+    if not os.path.exists(script_path):
+        print(f"Error: tg_bot.py not found at {script_path}", file=sys.stderr)
+        sys.exit(1)
+
+    print("Starting Telegram listener...", file=sys.stderr)
+    try:
+        subprocess.run([sys.executable, script_path], check=True)
+    except KeyboardInterrupt:
+        print("\nStopped.", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 # ──────────────────────────── setup ────────────────────────────
 
 @cli.command()

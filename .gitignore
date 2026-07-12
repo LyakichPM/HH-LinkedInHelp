@@ -1,6 +1,35 @@
-# secrets
+# ============================================================
+# SECRETS & PERSONAL DATA — NEVER COMMIT
+# ============================================================
 config.local.json
+config/config.local.json
 hh_cookies.json
+*_cookies.json
+
+# Browser profile — contains live session cookies (LinkedIn/hh.ru). Committing
+# this = handing out account access. Keep it OUTSIDE the repo entirely.
+chrome_profile/
+**/chrome_profile/
+*.sqlite
+Cookies
+Cookies-journal
+
+# LinkedIn / hh.ru scrape dumps & debug artifacts (may embed personal data)
+li_*
+cover_*.html
+*_debug.html
+*_profile.html
+*_profile*.json
+
+# Ad-hoc debug scripts — historically hardcoded the bot token. Keep them local.
+check_*.py
+get_chat_id*.py
+fetch_tg*.py
+send_tg*.py
+send_cover*.py
+tg_monitor.py
+tg_ack*.py
+tg_*_result.py
 
 # Telegram inbox queue
 tg-bridge/tg_inbox.jsonl
@@ -31,8 +60,12 @@ after_*.png
 apply_*.png
 li_*.png
 
-# Temporary cover letters (keep only final ones if needed)
+# Cover letters — contain personal data (phone, salary expectations, name)
 cover_*.txt
+cover_letters/
+
+# Generated marketing artifacts (local only)
+linkedin_post_image.*
 
 # Temporary scripts output
 *.jsonl

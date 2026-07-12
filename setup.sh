@@ -7,12 +7,23 @@ echo "=== hh-agent setup ==="
 if [ ! -f config.local.json ]; then
     cp config/config.example.json config.local.json
     echo "Created config.local.json — edit it with your tokens"
+else
+    echo "config.local.json already exists"
 fi
 
 # Install Python deps
-pip install -e .
+echo ""
+echo "Installing Python dependencies..."
+if pip install -e . 2>/dev/null; then
+    echo "Dependencies installed via pip install -e ."
+else
+    echo "Falling back to manual install..."
+    pip install playwright requests pyyaml python-dotenv
+fi
 
 # Install Playwright + Chromium
+echo ""
+echo "Installing Playwright Chromium..."
 python -m playwright install chromium
 
 echo ""

@@ -53,6 +53,12 @@ Python-агент для автоматизации поиска ваканси�
 git clone https://github.com/LyakichPM/HH-LinkedInHelp.git
 cd HH-LinkedInHelp
 
+# Рекомендуется: виртуальное окружение
+python -m venv .venv
+source .venv/bin/activate    # Linux/macOS
+# .venv\Scripts\activate     # Windows (PowerShell)
+# .venv\Scripts\activate.bat # Windows (cmd)
+
 # Установка зависимостей (Python 3.10+)
 pip install -e .
 # или вручную:
@@ -63,8 +69,13 @@ playwright install chromium
 
 # Конфигурация
 cp config/config.example.json config/config.local.json
+# Windows (cmd): copy config\config.example.json config\config.local.json
+# Windows (PowerShell): Copy-Item config\config.example.json config\config.local.json
 # Отредактируйте config.local.json — вставьте свои токены/куки
 ```
+
+> **Windows:** Можно запустить `.\setup.ps1` — он создаст конфиг, установит зависимости и Playwright.
+> **Linux/macOS:** Можно запустить `./setup.sh` (требует `chmod +x setup.sh`).
 
 ---
 
@@ -104,7 +115,7 @@ hh auth login
 hh search "iGaming Product Manager" 300000 7
 
 # 3. Отклик на вакансию с авто-сопроводительным
-hh apply 134646797
+hh apply 134646797 cover_134646797.txt
 
 # 4. Проверка статуса отклика
 hh verify 134646797
@@ -120,6 +131,9 @@ hh tg "Тестовое сообщение"
 
 # 8. Чтение входящих из Telegram
 hh tg-inbox
+
+# 9. Запуск Telegram long-poll слушателя (фоновый режим)
+hh tg listen
 ```
 
 ---
@@ -132,9 +146,10 @@ hh tg-inbox
 | `/hh-apply vacancy_id [cover_file]` | Отклик с сопроводительным |
 | `/hh-verify vacancy_id` | Проверка статуса |
 | `/hh-negotiations` | Активные чаты |
-| `/hh-auth login\|status` | Авторизация |
+| `/hh-auth login|status` | Авторизация |
 | `/hh-tg "text"` | Отправить в TG |
 | `/hh-tg-inbox` | Прочитать входящие |
+| `/hh-tg-listen` | Запустить long-poll слушатель |
 | `/hh-cv-design split` | Генерация PDF |
 
 ---
@@ -165,9 +180,19 @@ hh/
 - Non-breaking space (`\xa0`) в русском тексте («Вы\xa0откликнулись») — нормализация через `.replace('\xa0', ' ')`
 - Автосохранение письма на `blur` — требуется `Tab` + ожидание 5-7 сек + **reload страницы для верификации**
 
-### Telegram (PowerShell 5.1 bug)
-- `ConvertTo-Json` + `Invoke-RestMethod` ломает кириллицу
+### Telegram (кодировка в CLI)
+
+**Windows (PowerShell 5.1):** `ConvertTo-Json` + `Invoke-RestMethod` ломает кириллицу.
 - **Решение**: пишем UTF-8 JSON в файл → `curl.exe -d "@file" -H "Content-Type: application/json; charset=utf-8"`
+
+**Linux/macOS (bash/zsh):** `curl` нативно работает с UTF-8, проблем нет:
+```bash
+curl -X POST -H "Content-Type: application/json; charset=utf-8" \
+  -d '{"chat_id":"...","text":"Привет"}' \
+  "https://api.telegram.org/bot<TOKEN>/sendMessage"
+```
+
+> В коде (`hh/telegram.py`) используется `requests` — кроссплатформенно, никаких проблем с кодировкой. `curl.exe` используется только в обёртках для запуска из-под системного Python (см. ниже).
 
 ### Python Sandbox (exit code 49)
 - Системный `python`/`python3` в изолированной песочнице (нет сети/файлов)
@@ -189,6 +214,8 @@ hh/
 - Playwright + Chromium (автоустановка: `playwright install chromium`)
 - Windows / Linux / macOS
 - Прокси с российским IP (для доступа к hh.ru из-за границы)
+
+> ⚠️ **Windows-only:** `cloudflared.exe` (для HTTPS туннеля TG WebApp) — в `.gitignore`, не в репозитории. На Linux/macOS используйте `cloudflared` из пакетного менеджера или Docker.
 
 ---
 
