@@ -204,7 +204,18 @@ curl -X POST -H "Content-Type: application/json; charset=utf-8" \
 
 - **Никаких секретов в git**: `.gitignore` исключает `config.local.json`, `hh_cookies.json`, `tg_inbox.jsonl`, `*.exe`, `__pycache__/`, `.env`
 - `cloudflared.exe` (51 MB) удалён из истории, добавлен в `.gitignore`
+- **Секрет-скан на каждый коммит и push**: pre-commit хук + CI на базе [gitleaks](https://github.com/gitleaks/gitleaks) физически не дают токену/куке/ключу попасть в историю
 - Лицензия: **MIT** — свободное использование, модификация, распространение
+
+### Настройка защиты от утечек (один раз)
+
+```bash
+pip install pre-commit
+pre-commit install          # ставит git-хук; теперь gitleaks + ruff бегут при каждом commit
+pre-commit run --all-files  # разовая проверка всего репозитория
+```
+
+Конфиг — [`.pre-commit-config.yaml`](.pre-commit-config.yaml). CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) дублирует секрет-скан на весь `fetch-depth: 0` (вся история) и гоняет `ruff` на push/PR — падает, если найден секрет или синтаксическая ошибка Python.
 
 ---
 

@@ -1,0 +1,33 @@
+# Pre-commit hooks for hh-agent.
+# Install once:  pip install pre-commit  &&  pre-commit install
+# Run manually:  pre-commit run --all-files
+#
+# The gitleaks hook is the important one: it blocks any commit that contains a
+# secret (bot tokens, API keys, cookies) BEFORE it can enter git history.
+
+repos:
+  # ---- Secret scanning (blocks tokens/keys/cookies from being committed) ----
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # ---- Basic hygiene ----
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]        # block accidental commits of profiles/binaries
+      - id: check-json
+      - id: check-yaml
+      - id: detect-private-key
+
+  # ---- Python lint ----
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: ["--fix"]
