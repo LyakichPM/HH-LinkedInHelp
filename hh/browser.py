@@ -5,7 +5,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-from hh.config import get
+from hh.config import get, resolve_path
 
 DEFAULT_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -34,12 +34,18 @@ def create_context(headless=False):
     )
 
     # Load cookies if they exist
-    cookie_file = get("hh", "cookie_file", default="hh_cookies.json")
+    cookie_file = resolve_path(get("hh", "cookie_file", default="hh_cookies.json"))
     try:
         with open(cookie_file, encoding="utf-8") as f:
             context.add_cookies(json.load(f))
     except FileNotFoundError:
-        pass  # not fatal — user can run 'hh auth login'
+        # Not fatal, but MUST be visible: without cookies the browser is a
+        # guest and hh.ru silently redirects to login/signup walls.
+        print(
+            f"WARNING: no cookies loaded ({cookie_file} not found) — "
+            "browser is a GUEST session. Run 'hh auth login' first.",
+            file=sys.stderr,
+        )
 
     return p, b, context
 

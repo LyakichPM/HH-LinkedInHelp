@@ -32,11 +32,16 @@ def load_config():
 
 
 def get_inbox_path(config):
-    """Get inbox file path from config or default."""
-    inbox = config.get("telegram", {}).get("inbox_file", "tg_inbox.jsonl")
+    """Get inbox file path from config or default.
+
+    Relative paths resolve against the REPO ROOT (parent of tg-bridge/),
+    same anchor as hh.config.resolve_path — keep them in sync, or the
+    listener writes to one file while `hh tg inbox` reads another.
+    """
+    inbox = config.get("telegram", {}).get("inbox_file", "tg-bridge/tg_inbox.jsonl")
     if not os.path.isabs(inbox):
-        # Resolve relative to config location
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), inbox)
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(repo_root, inbox)
     return inbox
 
 

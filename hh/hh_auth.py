@@ -4,7 +4,7 @@ import json
 import sys
 
 from hh.browser import create_context, DEFAULT_UA
-from hh.config import get
+from hh.config import get, resolve_path
 from hh.utils import normalize
 
 
@@ -14,7 +14,7 @@ HH_MAIN_URL = "https://hh.ru/"
 
 def login():
     """Open browser for user to log in manually, then save cookies."""
-    cookie_file = get("hh", "cookie_file", default="hh_cookies.json")
+    cookie_file = resolve_path(get("hh", "cookie_file", default="hh_cookies.json"))
 
     p, b, context = create_context(headless=False)
     page = context.new_page()
@@ -53,7 +53,7 @@ def login():
 
 def check_auth():
     """Return True if cookies look valid (can load hh.ru)."""
-    cookie_file = get("hh", "cookie_file", default="hh_cookies.json")
+    cookie_file = resolve_path(get("hh", "cookie_file", default="hh_cookies.json"))
     try:
         with open(cookie_file, encoding="utf-8") as f:
             cookies = json.load(f)

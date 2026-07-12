@@ -11,14 +11,20 @@ import time
 
 import requests
 
-from hh.config import get
+from hh.config import get, resolve_path
 
 
 # --- paths ---
 
 def _inbox_path():
-    """Path to the inbox JSONL file."""
-    return get("telegram", "inbox_file", default="tg_inbox.jsonl")
+    """Path to the inbox JSONL file.
+
+    Must match where tg-bridge/tg_bot.py (the canonical listener) writes,
+    otherwise reader and writer split-brain and messages look 'lost'.
+    """
+    return resolve_path(
+        get("telegram", "inbox_file", default="tg-bridge/tg_inbox.jsonl")
+    )
 
 
 def _bot_token():

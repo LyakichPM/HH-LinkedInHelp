@@ -1,5 +1,14 @@
 """Apply to hh.ru vacancies with cover letters via Playwright.
 
+╔══════════════════════════════════════════════════════════════════════╗
+║ DANGER: `applicant/vacancy_response?vacancyId=` is a WRITE endpoint. ║
+║ For vacancies WITHOUT screening questions, merely LOADING this URL   ║
+║ AUTO-SUBMITS an empty application. NEVER use it to probe             ║
+║ applied-status — use hh_verify.py (read-only /vacancy/<vid> and      ║
+║ /applicant/negotiations) or inspect the employer chat instead.       ║
+║ (2026-07-12: probing this URL created ~10 empty applications.)       ║
+╚══════════════════════════════════════════════════════════════════════╝
+
 CRITICAL: Cover letter textarea uses AJAX auto-save on blur.
 .fill() only fills local DOM — server never receives it unless blur triggers AJAX.
 
@@ -11,6 +20,19 @@ Flow:
   2. If not applied → go to response page → fill questions + letter → submit
   3. If already applied → use toggle → fill → blur → verify
   4. NEVER let a submit go through without letter_filled=True verification
+
+RESULT-FLAG RELIABILITY (verified 2026-07-12, see agent/instructions.md):
+  - Question-FUL vacancies: letter lands in the employer chat, but the
+    post-submit readback often returns a FALSE NEGATIVE
+    ("Letter not persisted after submit"). Don't trust the failure flag.
+  - Question-LESS vacancies: page-load auto-submits empty, then the letter
+    saved via the response-record toggle does NOT reach the employer chat
+    (chat still shows "Без сопроводительного письма") — success flag lies.
+    Repair by sending the letter as a chat MESSAGE (hh.ru/chat/<chatId>,
+    textarea [data-qa="chatik-new-message-text"]).
+  - The ONLY source of truth: the first chat bubble
+    ([data-qa^="chatik-chat-message-"][data-qa$="-text"]) contains the
+    letter text, not "Без сопроводительного письма".
 """
 
 import sys
@@ -360,6 +382,12 @@ def _fill_and_submit_response_page(page, resp_url, cover_letter):
 
 def apply_to_vacancy(vid, cover_letter, headless=False):
     """Apply to a single vacancy with cover letter.
+
+    WARNING: opening resp_url is itself a WRITE for question-less vacancies
+    (auto-submits empty). Only call this function when you INTEND to apply,
+    never to check status. After it returns, verify the letter is in the
+    employer CHAT (first bubble) — the returned flags are unreliable both
+    ways (see module docstring).
 
     STRATEGY (Magritte-aware):
       1. Go to response page DIRECTLY — it shows either the apply form or
