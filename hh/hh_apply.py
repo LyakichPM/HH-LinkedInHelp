@@ -12,13 +12,23 @@
 CRITICAL: Cover letter textarea uses AJAX auto-save on blur.
 .fill() only fills local DOM — server never receives it unless blur triggers AJAX.
 
-PRIMARY METHOD: Navigate to response page directly, fill letter FIRST, then submit.
-This avoids quick-apply (which sends empty application without letter).
+PRIMARY METHOD (2026-07-13, letter-first): click "Откликнуться" on the
+/vacancy/<vid> page and fill the cover letter inside the response POPUP
+before submitting — the application is created WITH the letter and it
+lands as the first employer-chat bubble. Never navigate to
+vacancy_response directly for the initial apply: for question-less
+vacancies that page auto-submits an EMPTY application on load.
 
-Flow:
-  1. Go to vacancy page → check if already applied
-  2. If not applied → go to response page → fill questions + letter → submit
-  3. If already applied → use toggle → fill → blur → verify
+Flow (apply_to_vacancy → _apply_via_vacancy_page):
+  1. Go to vacancy page → check if already applied ("Вы откликнулись")
+  2. Click the apply button → one of three outcomes:
+     a. response POPUP appears → fill letter textarea → submit  (best path)
+     b. navigation to vacancy_response (screening questions) →
+        _fill_and_submit_response_page fills questions + letter → submit
+     c. quick-apply, no popup ("Вы откликнулись" without a form) →
+        application went WITHOUT letter → caller MUST repair via chat
+  3. If already applied → letter via employer chat message, not the
+     response-record toggle (the record letter never reaches the chat)
   4. NEVER let a submit go through without letter_filled=True verification
 
 RESULT-FLAG RELIABILITY (verified 2026-07-12, see agent/instructions.md):
@@ -380,62 +390,144 @@ def _fill_and_submit_response_page(page, resp_url, cover_letter):
 
 # ── main apply logic ──────────────────────────────────────────────────
 
-def apply_to_vacancy(vid, cover_letter, headless=False):
-    """Apply to a single vacancy with cover letter.
+def _kill_cookie_banner(page):
+    """The cookie banner intercepts clicks on lower-page elements."""
+    try:
+        page.evaluate("document.getElementById('bottom-cookies-policy-informer')?.remove()")
+    except Exception:
+        pass
 
-    WARNING: opening resp_url is itself a WRITE for question-less vacancies
-    (auto-submits empty). Only call this function when you INTEND to apply,
-    never to check status. After it returns, verify the letter is in the
-    employer CHAT (first bubble) — the returned flags are unreliable both
-    ways (see module docstring).
 
-    STRATEGY (Magritte-aware):
-      1. Go to response page DIRECTLY — it shows either the apply form or
-         "Вы откликнулись" if already applied
-      2. If already applied → add letter flow (verify + save)
-      3. If NOT applied → fill questions + letter, submit
-      4. NEVER click "Откликнуться" on the vacancy page — it may quick-apply without letter
+def _apply_via_vacancy_page(page, vid, cover_letter):
+    """Letter-first apply: click 'Откликнуться' on /vacancy/<vid> and fill
+    the cover letter BEFORE the application is created.
+
+    Outcomes (see module docstring):
+      a. popup with letter textarea → fill → submit        (best)
+      b. navigation to vacancy_response (screening q's)    → reuse form filler
+      c. quick-apply, no popup → application went EMPTY    → caller repairs via chat
 
     Returns dict: {success, method, letter_filled, error}
     """
     vacancy_url = f"https://hh.ru/vacancy/{vid}"
     resp_url = f"https://hh.ru/applicant/vacancy_response?vacancyId={vid}"
-    p, b, context, page = new_page(headless=headless)
 
+    page.goto(vacancy_url, wait_until="domcontentloaded", timeout=45000)
+    time.sleep(3)
+    body_text = _normalize_body(page)
+    if "captcha" in body_text:
+        return {"success": False, "method": "captcha", "letter_filled": False,
+                "error": "Captcha on vacancy page — stop and ask the user"}
+    if "вы откликнулись" in body_text:
+        return {"success": False, "method": "already_applied", "letter_filled": False,
+                "error": "Already applied — send the letter as an employer-chat MESSAGE, "
+                         "not via the response-record toggle (it never reaches the chat)"}
+
+    _kill_cookie_banner(page)
+    btn = page.locator('[data-qa="vacancy-response-link-top"]').first
     try:
-        # ── Step 1: Go to response page directly ──
-        print(f"  Opening response page for {vid}...", file=sys.stderr)
+        btn.wait_for(state="visible", timeout=10000)
+    except Exception:
+        return {"success": False, "method": "no_apply_button", "letter_filled": False,
+                "error": "Apply button [vacancy-response-link-top] not found"}
+    btn.click()
+    time.sleep(3)
+
+    # Outcome b: navigated to the full response form (screening questions)
+    if "vacancy_response" in page.url:
+        print("  Navigated to response form (screening questions)", file=sys.stderr)
+        return _fill_and_submit_response_page(page, resp_url, cover_letter)
+
+    # Outcome a: response popup. Observed data-qa's are the SAME as the full
+    # response page: letter toggle 'vacancy-response-letter-toggle' and submit
+    # 'vacancy-response-submit-popup' (selectors.json's popup-form-* variants
+    # kept as fallback).
+    submit = page.locator(
+        '[data-qa="vacancy-response-submit-popup"], '
+        '[data-qa="vacancy-response-popup-form-submit"]').first
+    popup_open = False
+    try:
+        popup_open = submit.is_visible(timeout=8000)
+    except Exception:
+        pass
+
+    if popup_open:
+        # letter textarea: dedicated popup field → any visible textarea → toggle first
+        ta = page.locator('[data-qa="vacancy-response-popup-form-letter"]').first
         try:
-            page.goto(resp_url, wait_until="domcontentloaded", timeout=30000)
-            time.sleep(2)
-        except Exception as e:
-            return {"success": False, "method": "error", "error": f"Response page navigation: {e}", "letter_filled": False}
+            ta_visible = ta.is_visible(timeout=1500)
+        except Exception:
+            ta_visible = False
+        if not ta_visible:
+            for cand in page.locator("textarea").all():
+                try:
+                    if cand.is_visible(timeout=300):
+                        ta = cand
+                        ta_visible = True
+                        break
+                except Exception:
+                    pass
+        if not ta_visible:
+            try:
+                tog = page.locator('[data-qa="vacancy-response-letter-toggle"]').first
+                if tog.is_visible(timeout=2000):
+                    tog.click()
+                    time.sleep(1.5)
+                    for cand in page.locator("textarea").all():
+                        if cand.is_visible(timeout=300):
+                            ta = cand
+                            ta_visible = True
+                            break
+            except Exception:
+                pass
+        if not ta_visible:
+            return {"success": False, "method": "popup_no_letter_field", "letter_filled": False,
+                    "error": "Popup open but no letter textarea found — NOT submitted"}
 
-        # ── Step 2: Check if already applied (response page shows "Вы откликнулись") ──
-        # NOTE: hh.ru uses non-breaking spaces (\xa0) in text. Normalize!
-        body_text = _normalize_body(page)
-        already_applied = "вы откликнулись" in body_text
-        if not already_applied:
-            page.wait_for_timeout(2000)
-            body_text = _normalize_body(page)
-            already_applied = "вы откликнулись" in body_text
+        ta.fill(cover_letter)
+        time.sleep(0.5)
+        submit.click()
+        for _ in range(15):
+            time.sleep(1)
+            try:
+                body_text = _normalize_body(page)
+                if "вы откликнулись" in body_text:
+                    return {"success": True, "method": "popup_letter_first", "letter_filled": True}
+            except Exception:
+                pass
+        return {"success": False, "method": "popup_letter_first", "letter_filled": True,
+                "error": "Popup submitted but no 'вы откликнулись' confirmation — verify via chat"}
 
-        if already_applied:
-            print(f"  Already applied to {vid}", file=sys.stderr)
-            result = _add_letter_internal(page, resp_url, cover_letter)
-            context.close(); b.close(); p.stop()
-            return result
+    # Outcome c: quick-apply — application already went, without a letter
+    body_text = _normalize_body(page)
+    if "вы откликнулись" in body_text:
+        return {"success": True, "method": "quick_apply_NO_letter", "letter_filled": False,
+                "error": "Quick-apply sent WITHOUT letter — repair via employer-chat message NOW"}
 
-        # We're on the response page and NOT applied — fill and submit
-        print(f"  Not yet applied — filling form...", file=sys.stderr)
-        result = _fill_and_submit_response_page(page, resp_url, cover_letter)
-        context.close(); b.close(); p.stop()
-        return result
+    return {"success": False, "method": "no_popup_no_result", "letter_filled": False,
+            "error": "Apply clicked but neither popup, nor navigation, nor confirmation appeared"}
 
+
+def apply_to_vacancy(vid, cover_letter, headless=False):
+    """Apply to a single vacancy with cover letter — LETTER-FIRST.
+
+    PRIMARY: _apply_via_vacancy_page (popup flow) — the letter is part of
+    the application from the start and lands in the first chat bubble.
+    NEVER navigates to vacancy_response directly (question-less vacancies
+    auto-submit an EMPTY application on page load).
+
+    Only call this when you INTEND to apply, never to check status.
+    After it returns, verify the letter in the employer CHAT (first bubble):
+    method 'quick_apply_NO_letter' means the caller MUST send the letter
+    as a chat message immediately.
+
+    Returns dict: {success, method, letter_filled, error}
+    """
+    p, b, context, page = new_page(headless=headless)
+    try:
+        return _apply_via_vacancy_page(page, vid, cover_letter)
     except Exception as e:
-        context.close(); b.close(); p.stop()
         return {"success": False, "method": "error", "error": str(e), "letter_filled": False}
-
     finally:
         try:
             context.close()

@@ -16,6 +16,10 @@ Cookies-journal
 
 # LinkedIn / hh.ru scrape dumps & debug artifacts (may embed personal data)
 li_*
+# ...but the LinkedIn automation SOURCE lives in li-tools/ — keep the code,
+# the li_* rule above is meant for scrape/debug output files, not scripts.
+!li-tools/
+!li-tools/*.py
 cover_*.html
 *_debug.html
 *_profile.html
@@ -35,6 +39,10 @@ tg_*_result.py
 tg-bridge/tg_inbox.jsonl
 tg_inbox.jsonl
 tg_offset_poll.txt
+tg-bridge/tg_group_state.json
+
+# HR-outreach side experiment — contacts, outreach logs, login QR: personal data
+hr-outreach/
 
 # Binaries / large files
 *.exe
@@ -90,3 +98,4 @@ Thumbs.db
 .env
 venv/
 .venv/
+li_profile/
