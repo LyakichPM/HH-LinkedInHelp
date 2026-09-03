@@ -2,7 +2,16 @@
   "_note": "Copy this to config.local.json and fill your values. config.local.json is in .gitignore.",
   "telegram": {
     "bot_token": "YOUR_TG_BOT_TOKEN",
-    "chat_id": "YOUR_CHAT_ID"
+    "chat_id": "YOUR_CHAT_ID",
+    "thread_id": null,
+    "threads": {
+      "hh": 0,
+      "linkedin": 0,
+      "prep": 0,
+      "reports": 0
+    },
+    "_note_threads": "Forum group topics: id of each topic. Without message_thread_id a message lands in the group's general stream. Leave empty for a plain chat.",
+    "inbox_file": "tg-bridge/tg_inbox.jsonl"
   },
   "proxy": {
     "url": "http://user:pass@ip:port",
