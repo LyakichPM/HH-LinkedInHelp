@@ -1,101 +1,132 @@
 # ============================================================
-# SECRETS & PERSONAL DATA — NEVER COMMIT
+# РЕПОЗИТОРИЙ ПУБЛИЧНЫЙ. Модель защиты - БЕЛЫЙ СПИСОК.
+#
+# Всё в корне закрыто по умолчанию (`/*`), открывается только то, что явно
+# перечислено ниже. Так новый разовый скрипт, дамп вакансии, письмо или
+# скриншот НЕ утекут просто потому, что под них не написали правило.
+#
+# Чёрный список этого не давал: 03.09.2026 аудит нашёл в кандидатах на коммит
+# живой профиль браузера `data/login_profile` (48 МБ, 509 файлов, cookies
+# сессии hh.ru), резервную копию `hh_cookies.json.bak` и больше тысячи файлов
+# с ФИО, телефоном, почтой и контактами третьих лиц.
+# ============================================================
+
+# ---- всё закрыто ----
+/*
+
+# ---- открыт инструментарий и документация ----
+!/.gitignore
+!/.github/
+!/.pre-commit-config.yaml
+!/LICENSE
+!/README.md
+!/pyproject.toml
+!/setup.ps1
+!/setup.sh
+!/LINKEDIN_POSTS.md
+!/LINKEDIN_POST_V4.md
+!/agent/
+!/config/
+!/docs/
+!/hh/
+!/li-tools/
+!/tg-bridge/
+!/tools/
+
+# ---- внутри открытых каталогов: только переиспользуемый код ----
+
+# config: публикуется только шаблон, но не заполненный конфиг
+/config/*
+!/config/config.example.json
+
+# tg-bridge: публикуется только бот, но не очередь входящих и не состояние
+/tg-bridge/*
+!/tg-bridge/tg_bot.py
+
+# li-tools: публикуются постоянные li_*.py.
+# Разовое (с датой в имени), пробы, дампы и скриншоты - мимо.
+/li-tools/_*
+/li-tools/*_20[0-9][0-9]-*
+/li-tools/connect_*
+/li-tools/debug_*
+/li-tools/view_post*
+/li-tools/probe_*
+/li-tools/msg_*
+/li-tools/*.png
+/li-tools/*.jpg
+/li-tools/*.json
+/li-tools/*.txt
+
+# ============================================================
+# ДОСТУПЫ - не публикуются никогда, даже если попадут в открытый каталог
 # ============================================================
 config.local.json
 config/config.local.json
-hh_cookies.json
 *_cookies.json
+*_cookies.json.bak
+*.bak
+.env
+*.pem
+*.key
 
-# Browser profile — contains live session cookies (LinkedIn/hh.ru). Committing
-# this = handing out account access. Keep it OUTSIDE the repo entirely.
+# Профили браузера = живые cookies сессии. Публикация профиля равна выдаче
+# доступа к аккаунтам hh.ru и LinkedIn.
+data/
+li_profile/
 chrome_profile/
+login_profile/
 **/chrome_profile/
+**/login_profile/
+*_profile/
 *.sqlite
 Cookies
 Cookies-journal
 
-# LinkedIn / hh.ru scrape dumps & debug artifacts (may embed personal data)
-li_*
-# ...but the LinkedIn automation SOURCE lives in li-tools/ — keep the code,
-# the li_* rule above is meant for scrape/debug output files, not scripts.
-!li-tools/
-!li-tools/*.py
+# ============================================================
+# ЛИЧНЫЕ ДАННЫЕ - кандидата и третьих лиц (рекрутеров, работодателей)
+# ============================================================
+cover_letters/
+cover_*.txt
 cover_*.html
-*_debug.html
-*_profile.html
-*_profile*.json
-
-# Ad-hoc debug scripts — historically hardcoded the bot token. Keep them local.
-check_*.py
-get_chat_id*.py
-fetch_tg*.py
-send_tg*.py
-send_cover*.py
-tg_monitor.py
-tg_ack*.py
-tg_*_result.py
-
-# Telegram inbox queue
-tg-bridge/tg_inbox.jsonl
+ats_html/
+answers/
+answers_*.json
+applications_*.md
+shortlist*
+BOOKMAKERS_*.md
+PROJECT_STATUS.md
+TG_POSTS.md
+LINKEDIN_POST.md
+hr-outreach/
+assets/
+*.pdf
+*.png
+*.jpg
+*.jpeg
 tg_inbox.jsonl
+tg-bridge/tg_inbox.jsonl
 tg_offset_poll.txt
 tg-bridge/tg_group_state.json
+_audit_report.txt
 
-# HR-outreach side experiment — contacts, outreach logs, login QR: personal data
-hr-outreach/
-
-# Binaries / large files
-*.exe
-
-# Debug / temporary files
-*_results.json
-*_results.txt
-*_stderr.txt
-*_stdout.txt
-*_check_results.json
-*_check_results.txt
-*_fix_results.json
-*_fix_results.txt
-*_apply_results.json
-*_apply_results.txt
-*_debug.png
-*_before.png
-*_after.png
-*_filled.png
-*_result.png
-chat_*.png
-after_*.png
-apply_*.png
-li_*.png
-
-# Cover letters — contain personal data (phone, salary expectations, name)
-cover_*.txt
-cover_letters/
-
-# Generated marketing artifacts (local only)
-linkedin_post_image.*
-
-# Temporary scripts output
-*.jsonl
-*.log
-
-# Python
+# ============================================================
+# Мусор сборки и среды
+# ============================================================
 __pycache__/
 *.pyc
 *.egg-info/
 dist/
 build/
-
-# OS
+venv/
+.venv/
+*.exe
+*.log
+*.jsonl
 .DS_Store
 Thumbs.db
-
-# IDE
 .vscode/
 .idea/
 
-# Environment
-.env
-venv/
-.venv/
-li_profile/
+# личные данные владельца: ФИО, телефон, телеграм, id резюме, работодатель
+agent/owner.local.md
+*.local.md

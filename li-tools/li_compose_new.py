@@ -9,12 +9,18 @@ Usage: li_compose_new.py <recipient_query> <expect_name_token> <msg_file> [dry]
   containing expect_name_token
 - verifies the recipient pill/chip contains expect_name_token before typing
 """
+import os
 import sys, io, re, time, json
 from playwright.sync_api import sync_playwright
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-PROFILE = r"C:\Users\Ilya\.claude\hh-agent\li_profile"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _dir(name, env):
+    """Каталог рядом с репозиторием; путь не зашит, логина ОС в коде нет."""
+    return os.environ.get(env) or os.path.join(_ROOT, name)
+
+PROFILE = _dir("li_profile", "LI_PROFILE")
 QUERY = sys.argv[1]
 EXPECT = sys.argv[2].lower()
 MSG_FILE = sys.argv[3]
@@ -155,7 +161,15 @@ try:
             raise Exception("send button not found")
         send_btn.click()
         page.wait_for_timeout(3000)
-        leftover = box.inner_text().strip()
+        # После отправки LinkedIn уводит с формы «Новое сообщение» в настоящий
+        # тред, и поле compose ИСЧЕЗАЕТ — inner_text() падает по таймауту.
+        # Это признак успеха, а не провала: провал — когда поле на месте и
+        # текст в нём остался.
+        try:
+            leftover = box.inner_text(timeout=5000).strip()
+        except Exception:
+            leftover = ""
+            status["compose_box_gone"] = True
         status["leftover_in_box"] = leftover[:80]
         if leftover:
             raise Exception("compose box still has text after send - FAILED")

@@ -11,12 +11,18 @@ Safety:
 - dry: reports everything, does NOT click Send, closes the modal.
 - Detects already-pending / already-connected / email-gate and aborts safely.
 """
+import os
 import sys, io, re, time, json
 from playwright.sync_api import sync_playwright
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-PROFILE = r"C:\Users\Ilya\.claude\hh-agent\li_profile"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _dir(name, env):
+    """Каталог рядом с репозиторием; путь не зашит, логина ОС в коде нет."""
+    return os.environ.get(env) or os.path.join(_ROOT, name)
+
+PROFILE = _dir("li_profile", "LI_PROFILE")
 URL = sys.argv[1]
 EXPECT = sys.argv[2].lower()
 MSG_FILE = sys.argv[3]
@@ -27,7 +33,8 @@ with io.open(MSG_FILE, "r", encoding="utf-8") as f:
 
 CONNECT_RE = re.compile(r"установить контакт|connect|пригласить|invite", re.I)
 PENDING_RE = re.compile(r"ожидает|pending|отменить приглашение|withdraw", re.I)
-MORE_RE = re.compile(r"^(ещё|more|другие действия)", re.I)
+# «Еще» без ё встречается наравне с «Ещё» — по одному написанию меню теряется
+MORE_RE = re.compile(r"^(ещё|еще|more|другие действия)", re.I)
 
 p = sync_playwright().start()
 ctx = p.chromium.launch_persistent_context(
@@ -116,9 +123,11 @@ try:
                     continue
                 al = (el.get_attribute("aria-label") or "")
                 txt = (el.inner_text() or "").strip()
-                if el.evaluate("e=> !!e.closest('aside')"):
+                if el.evaluate("e=> !!e.closest('aside, header, nav, .global-nav')"):
                     continue
-                if txt.strip().lower() in ("ещё", "more") or re.search(r"другие действия|more actions", al, re.I):
+                # кнопка Ещё в карточке профиля бывает без текста: только aria-label
+                if (MORE_RE.match(txt.strip()) or MORE_RE.match(al.strip())
+                        or re.search(r"другие действия|more actions", al, re.I)):
                     more = el
                     break
             except Exception:
@@ -153,19 +162,23 @@ try:
     # 3. the connect modal: click "Персонализировать" / "Add a note" (NOT "send without note")
     NOTE_BTN_RE = re.compile(r"персонализировать|добавить заметку|добавить записку|add a note|personalize|customize", re.I)
     add_note = None
-    for el in page.locator('div[role="dialog"] button, .artdeco-modal button').all():
-        try:
-            if not el.is_visible():
+    deadline = time.time() + 20  # модалка дорисовывается, скелетон не судья
+    while add_note is None and time.time() < deadline:
+        for el in page.locator('div[role="dialog"] button, .artdeco-modal button').all():
+            try:
+                if not el.is_visible():
+                    continue
+                txt = (el.inner_text() or "").strip().lower()
+                al = (el.get_attribute("aria-label") or "").lower()
+                if re.search(r"без заметки|without", txt + " " + al):
+                    continue
+                if NOTE_BTN_RE.search(txt) or NOTE_BTN_RE.search(al):
+                    add_note = el
+                    break
+            except Exception:
                 continue
-            txt = (el.inner_text() or "").strip().lower()
-            al = (el.get_attribute("aria-label") or "").lower()
-            if re.search(r"без заметки|without", txt + " " + al):
-                continue
-            if NOTE_BTN_RE.search(txt) or NOTE_BTN_RE.search(al):
-                add_note = el
-                break
-        except Exception:
-            continue
+        if add_note is None:
+            page.wait_for_timeout(1000)
     st["add_note_found"] = add_note is not None
 
     # capture any "invitations left" quota text in the dialog
@@ -184,22 +197,45 @@ try:
     add_note.evaluate("e=>e.click()")
     human(500, 900)
 
-    # 4. the note textarea
+    # 4. the note textarea.
+    # Модалка приходит скелетоном и дорисовывается — искать поле один раз
+    # нельзя: разовый взгляд ловит серые заглушки и врёт «поля нет».
     ta = None
-    for sel in ['textarea#custom-message', 'textarea[name="message"]',
-                'div[role="dialog"] textarea', '.artdeco-modal textarea']:
-        loc = page.locator(sel)
-        if loc.count() and loc.first.is_visible():
-            ta = loc.first
-            break
+    deadline = time.time() + 20
+    while ta is None and time.time() < deadline:
+        for sel in ['textarea#custom-message', 'textarea[name="message"]',
+                    'div[role="dialog"] textarea', '.artdeco-modal textarea']:
+            loc = page.locator(sel)
+            if loc.count() and loc.first.is_visible():
+                ta = loc.first
+                break
+        if ta is None:
+            page.wait_for_timeout(1000)
     if ta is None:
         raise Exception("note textarea not found")
+    # счётчик и остаток приглашений рисуются только в панели записки
+    try:
+        dlg_txt = page.locator('div[role="dialog"], .artdeco-modal').first.inner_text(timeout=3000)
+    except Exception:
+        pass
+    mq = re.search(r"[^\n]*осталось[^\n]*", dlg_txt, re.I)
+    if mq:
+        st["quota_hint"] = mq.group(0).strip()[:160]
+
     maxlen = ta.get_attribute("maxlength")
+    # У поля нет maxlength — предел (200 знаков, не 300) живёт только в
+    # счётчике «N из 200» под ним. Перебор не режет текст, а ГАСИТ «Отправить»,
+    # и это выглядит как «модалка не закрылась». Спрашиваем счётчик.
+    if not maxlen:
+        m2 = re.search(r"из\s+(\d+)|/\s*(\d+)\s*$", dlg_txt)
+        if m2:
+            maxlen = m2.group(1) or m2.group(2)
+            st["note_limit_from_counter"] = True
     st["note_maxlength"] = maxlen
     st["msg_len"] = len(MESSAGE)
     if maxlen and len(MESSAGE) > int(maxlen):
         st["WILL_TRUNCATE"] = True
-        raise Exception(f"message {len(MESSAGE)} > maxlength {maxlen} - would truncate, aborting")
+        raise Exception(f"message {len(MESSAGE)} > limit {maxlen} - Send would stay disabled, aborting")
 
     ta.click()
     human()

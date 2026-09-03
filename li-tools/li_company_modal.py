@@ -6,12 +6,18 @@ Usage: li_company_modal.py <company_url> <expect_company> <msg_file> [topic=<sub
 
 dry mode: opens the modal, dumps topic options + state, does NOT send.
 """
+import os
 import sys, io, re, time, json
 from playwright.sync_api import sync_playwright
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-PROFILE = r"C:\Users\Ilya\.claude\hh-agent\li_profile"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _dir(name, env):
+    """Каталог рядом с репозиторием; путь не зашит, логина ОС в коде нет."""
+    return os.environ.get(env) or os.path.join(_ROOT, name)
+
+PROFILE = _dir("li_profile", "LI_PROFILE")
 URL = sys.argv[1]
 EXPECT = sys.argv[2].lower()
 MSG_FILE = sys.argv[3]

@@ -7,12 +7,18 @@ Usage: li_reply_thread.py <name_token> <msg_file> [attach=<path>] [dry]
 Safer than the floating dock: the conversation is clicked by name in the
 list, and the thread header is verified to contain the name before typing.
 """
+import os
 import sys, io, re, time, json
 from playwright.sync_api import sync_playwright
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-PROFILE = r"C:\Users\Ilya\.claude\hh-agent\li_profile"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _dir(name, env):
+    """Каталог рядом с репозиторием; путь не зашит, логина ОС в коде нет."""
+    return os.environ.get(env) or os.path.join(_ROOT, name)
+
+PROFILE = _dir("li_profile", "LI_PROFILE")
 NAME = sys.argv[1]
 MSG_FILE = sys.argv[2]
 ATTACH = None

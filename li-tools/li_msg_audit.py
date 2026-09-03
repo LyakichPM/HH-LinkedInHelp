@@ -2,12 +2,18 @@
 """Audit LinkedIn conversations via the FULL messaging page (not the dock).
 Dumps the conversation list (names + snippets), then opens the first
 conversation matching each given name and dumps its full message history."""
+import os
 import sys, io
 from playwright.sync_api import sync_playwright
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-PROFILE = r"C:\Users\Ilya\.claude\hh-agent\li_profile"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _dir(name, env):
+    """Каталог рядом с репозиторием; путь не зашит, логина ОС в коде нет."""
+    return os.environ.get(env) or os.path.join(_ROOT, name)
+
+PROFILE = _dir("li_profile", "LI_PROFILE")
 OUT = sys.argv[1]
 NAMES = sys.argv[2:]  # names to open, e.g. "First Last" "FirstName"
 

@@ -109,10 +109,11 @@ def tg():
 @tg.command()
 @click.argument("text")
 @click.option("-c", "--chat-id", help="Override chat ID")
-def send(text, chat_id):
+@click.option("-t", "--thread", help="Forum topic: name from telegram.threads or a number")
+def send(text, chat_id, thread):
     """Send a Telegram message."""
     from hh.telegram import send_cli
-    send_cli(text, chat_id)
+    send_cli(text, chat_id, thread)
 
 
 @tg.command()

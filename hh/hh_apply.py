@@ -433,6 +433,20 @@ def _apply_via_vacancy_page(page, vid, cover_letter):
     btn.click()
     time.sleep(3)
 
+    # Outcome d: предупреждение о релокации. У вакансий с локацией вне региона
+    # соискателя hh вклинивает модалку между кликом и формой отклика. Её кнопка
+    # живёт вне dialog-контейнеров, поэтому ищем по data-qa. Не нажать — значит
+    # получить no_popup_no_result и НЕ отправить ничего. Дальше ход обычный:
+    # либо форма с вопросами, либо всплывашка с письмом.
+    try:
+        warn = page.locator('[data-qa="relocation-warning-confirm"]').first
+        if warn.is_visible(timeout=3000):
+            print("  Relocation warning → confirming", file=sys.stderr)
+            warn.click()
+            time.sleep(3)
+    except Exception:
+        pass
+
     # Outcome b: navigated to the full response form (screening questions)
     if "vacancy_response" in page.url:
         print("  Navigated to response form (screening questions)", file=sys.stderr)

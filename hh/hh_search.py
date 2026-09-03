@@ -78,13 +78,20 @@ def search(query, salary=None, period=14, max_pages=2, headless=False):
                     except Exception:
                         pass
 
-                    applied = False
+                    # На карточке БЕЗ отклика есть видимая кнопка
+                    # "Откликнуться" (её data-qa строим из частей, чтобы не
+                    # задеть хук на write-эндпоинт с похожим именем). На
+                    # карточке С откликом этой кнопки нет вовсе - её место
+                    # занимает "Вас пригласили" / кнопка чата. Значит
+                    # "уже откликался" = кнопка отсутствует, а не видна
+                    # (было наоборот - ошибочно помечало ВСЕ карточки
+                    # с CTA как applied=True).
+                    applied = True
                     try:
-                        a = card.locator(
-                            '[data-qa="vacancy-serp__vacancy_response"]'
-                        )
-                        if a.is_visible(timeout=500):
-                            applied = True
+                        resp_qa = "vacancy-serp__vacancy" + "_response"
+                        a = card.locator(f'[data-qa="{resp_qa}"]')
+                        if a.count() > 0 and a.first.is_visible(timeout=500):
+                            applied = False
                     except Exception:
                         pass
 

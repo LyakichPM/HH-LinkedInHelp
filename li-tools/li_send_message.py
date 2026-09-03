@@ -13,12 +13,18 @@ Safety (added after the 2026-07-13 wrong-thread incident):
 - The open panel's close-button aria-label must contain the expected name
   (name= arg) before anything is typed.
 """
+import os
 import sys, io, re, time, json
 from playwright.sync_api import sync_playwright
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-PROFILE = r"C:\Users\Ilya\.claude\hh-agent\li_profile"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+def _dir(name, env):
+    """Каталог рядом с репозиторием; путь не зашит, логина ОС в коде нет."""
+    return os.environ.get(env) or os.path.join(_ROOT, name)
+
+PROFILE = _dir("li_profile", "LI_PROFILE")
 URL = sys.argv[1]
 MSG_FILE = sys.argv[2]
 FLAGS = sys.argv[3:]

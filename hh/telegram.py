@@ -45,17 +45,45 @@ def _chat_id():
     return cid
 
 
+def _thread_id(thread=None):
+    """Resolve a forum topic id.
+
+    The shared group is a forum: without message_thread_id the message lands in
+    the group's general stream instead of the topic, where nobody reads it.
+    `thread` may be a topic name from telegram.threads ("hh", "linkedin") or a
+    bare number; None falls back to telegram.thread_id.
+    """
+    names = get("telegram", "threads", default={}) or {}
+    if thread is None:
+        thread = get("telegram", "thread_id")
+    if thread is None or thread == "":
+        return None
+    if isinstance(thread, str):
+        if thread in names:
+            thread = names[thread]
+        elif thread.lstrip("-").isdigit():
+            thread = int(thread)
+        else:
+            print(f"Error: unknown topic {thread!r}; known: {sorted(names)}",
+                  file=sys.stderr)
+            sys.exit(1)
+    return int(thread)
+
+
 # --- send ---
 
-def send_message(text, chat_id=None, parse_mode=None):
+def send_message(text, chat_id=None, parse_mode=None, thread=None):
     """Send a plain text message to a Telegram chat.
 
     Returns requests.Response object.
     """
     token = _bot_token()
     chat_id = chat_id or _chat_id()
+    thread_id = _thread_id(thread)
 
     payload = {"chat_id": chat_id, "text": text}
+    if thread_id is not None:
+        payload["message_thread_id"] = thread_id
     if parse_mode:
         payload["parse_mode"] = parse_mode
 
@@ -68,14 +96,17 @@ def send_message(text, chat_id=None, parse_mode=None):
     return resp
 
 
-def send_document(file_path, caption=None, chat_id=None):
+def send_document(file_path, caption=None, chat_id=None, thread=None):
     """Send a file as a document to a Telegram chat."""
     token = _bot_token()
     chat_id = chat_id or _chat_id()
+    thread_id = _thread_id(thread)
 
     with open(file_path, "rb") as f:
         files = {"document": f}
         data = {"chat_id": chat_id}
+        if thread_id is not None:
+            data["message_thread_id"] = thread_id
         if caption:
             data["caption"] = caption
 
@@ -142,11 +173,13 @@ def inbox_count():
 
 # --- CLI ---
 
-def send_cli(text, chat_id):
+def send_cli(text, chat_id, thread=None):
     """CLI handler — send a message."""
-    result = send_message(text, chat_id=chat_id)
+    result = send_message(text, chat_id=chat_id, thread=thread)
     if result.ok:
-        print(f"✅ Message sent (id={result.json().get('result', {}).get('message_id', '?')})")
+        r = result.json().get("result", {})
+        where = f", топик {r.get('message_thread_id')}" if r.get("message_thread_id") else ""
+        print(f"✅ Message sent (id={r.get('message_id', '?')}{where})")
     else:
         print(f"❌ Failed: {result.text}")
         sys.exit(1)
